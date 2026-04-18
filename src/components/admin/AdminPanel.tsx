@@ -41,6 +41,7 @@ export default function AdminPanel({ participants, syncRuns: initialSyncRuns }: 
     error?: string;
   } | null>(null);
   const [syncRuns, setSyncRuns] = useState(initialSyncRuns);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function runSync() {
     setSyncing(true);
@@ -74,6 +75,22 @@ export default function AdminPanel({ participants, syncRuns: initialSyncRuns }: 
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+    }
+  }
+
+  async function toggleParticipant(id: string, currentActive: boolean) {
+    setTogglingId(id);
+    try {
+      const res = await fetch(`/api/admin/participants/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentActive }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -150,6 +167,7 @@ export default function AdminPanel({ participants, syncRuns: initialSyncRuns }: 
                 <th className="pb-3 pr-4">Strava ID</th>
                 <th className="pb-3 pr-4">Estado</th>
                 <th className="pb-3 pr-4">Token expira</th>
+                <th className="pb-3">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#27272A]">
@@ -172,11 +190,31 @@ export default function AdminPanel({ participants, syncRuns: initialSyncRuns }: 
                       minute: "2-digit",
                     })}
                   </td>
+                  <td className="py-3">
+                    <button
+                      onClick={() => toggleParticipant(p.id, p.isActive)}
+                      disabled={togglingId === p.id}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        p.isActive
+                          ? "bg-red-900/50 text-red-400 hover:bg-red-900"
+                          : "bg-green-900/50 text-green-400 hover:bg-green-900"
+                      }`}
+                    >
+                      {togglingId === p.id ? (
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                      ) : p.isActive ? (
+                        <XCircle className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle className="h-3 w-3" />
+                      )}
+                      {p.isActive ? "Desactivar" : "Activar"}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {participants.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-[#A1A1AA]">
+                  <td colSpan={5} className="py-6 text-center text-[#A1A1AA]">
                     No hay participantes registrados
                   </td>
                 </tr>

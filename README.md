@@ -150,23 +150,64 @@ src/
   app/
     page.tsx                       # Dashboard principal
     weekly-winners/page.tsx        # Ranking semanal
+    admin/page.tsx                 # Panel de administración
     api/
       strava/connect/route.ts      # OAuth redirect
       strava/callback/route.ts     # OAuth callback
       stats/                       # Endpoints: daily, weekly, monthly, range
       rankings/weekly-winners/     # Ranking de ganadores
-      cron/strava-sync/            # Sincronización diaria
+      cron/strava-sync/            # Sincronización diaria (CRON_SECRET)
+      admin/sync/                  # Sync manual (admin cookie)
+      admin/logout/                # Logout admin
+      admin/participants/[id]/     # Toggle participante activo/inactivo
   components/
     charts/                        # DailyProgress, Weekly, Monthly, Range
-    dashboard/                     # SummaryCards, Leaderboard
+    dashboard/                     # SummaryCards, Leaderboard, ConnectStravaButton
+    admin/AdminPanel.tsx           # Panel admin (sync, participantes, historial)
   services/
     strava/                        # auth, activity, sync
     stats/                         # daily, weekly, monthly, rankings
-  lib/                             # prisma, date, env
+  lib/                             # prisma, date, env, admin-session, oauth-state
   types/                           # participant, activity, stats
 prisma/
   schema.prisma                    # 4 modelos: Participant, Activity, DailyDistance, SyncRun
 ```
+
+## Panel de Administración
+
+La app tiene un panel de admin accesible en `/admin`. Se protege mediante signed cookies (HMAC) — no usa NextAuth.
+
+### ¿Quién es admin?
+
+El admin es el participante cuyo `stravaAthleteId` coincide con la env var `ADMIN_ATHLETE_ID`. Al conectar con Strava, si el athlete ID coincide, se setea una cookie firmada `admin_session` con TTL de 24h.
+
+### Configurar admin
+
+Agregar al `.env`:
+
+```env
+ADMIN_ATHLETE_ID=tu-strava-athlete-id
+ADMIN_SECRET=un-secreto-largo-y-aleatorio
+```
+
+> `ADMIN_ATHLETE_ID` es el número de atleta de Strava del admin (lo ves en la URL de tu perfil: `strava.com/athletes/12345678`).
+
+### Funcionalidades del panel
+
+- **Sync manual**: botón para ejecutar la sincronización de Strava para todos los participantes activos
+- **Gestión de participantes**: tabla con nombre, Strava ID, estado (activo/inactivo), y expiración del token. Botón toggle para activar/desactivar participantes
+- **Historial de sync**: tabla con el log de todas las sincronizaciones (estado, participante, timestamps, actividades fetched/stored, errores)
+- **Logout**: limpia la cookie de admin session
+
+### API endpoints de admin
+
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/admin/sync` | POST | Ejecuta sync manual (requiere cookie admin) |
+| `/api/admin/participants/[id]` | PATCH | Toggle `isActive` de un participante (body: `{ isActive: boolean }`) |
+| `/api/admin/logout` | GET/POST | Limpia cookies de admin |
+
+> El endpoint de cron (`/api/cron/strava-sync`) usa `CRON_SECRET`, no cookies de admin. Son flujos separados.
 
 ## Sincronización con Strava
 
@@ -225,6 +266,8 @@ Configurar estas variables en **Vercel Dashboard → Settings → Environment Va
 | `STRAVA_CLIENT_SECRET` | Client Secret de Strava API | `abcdef1234567890` |
 | `STRAVA_REDIRECT_URI` | Callback URL para OAuth | `https://running-challenge.vercel.app/api/strava/callback` |
 | `CRON_SECRET` | Secreto para proteger el endpoint de sync | generar un string aleatorio |
+| `ADMIN_ATHLETE_ID` | Strava Athlete ID del administrador | `12345678` |
+| `ADMIN_SECRET` | Secreto para firmar cookies de admin session | generar un string aleatorio largo |
 
 > **Importante**: `STRAVA_REDIRECT_URI` debe coincidir exactamente con lo configurado en Strava API Settings. Si deployeas en `https://running-challenge.vercel.app`, el callback debe ser `https://running-challenge.vercel.app/api/strava/callback`.
 
