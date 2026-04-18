@@ -51,7 +51,12 @@ function calculateGoalTracking(
       const daysToComplete = Math.ceil((GOAL_KM - totalKm) / dailyAvgKm);
       const completionDate = new Date(2026, 0, 1);
       completionDate.setDate(completionDate.getDate() + daysElapsed + daysToComplete - 1);
-      projectedCompletionDate = completionDate.toISOString().split("T")[0];
+      const yearEnd = new Date(2026, 11, 31);
+      if (completionDate > yearEnd) {
+        projectedCompletionDate = yearEnd.toISOString().split("T")[0];
+      } else {
+        projectedCompletionDate = completionDate.toISOString().split("T")[0];
+      }
     }
 
     return {
