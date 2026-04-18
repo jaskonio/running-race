@@ -78,48 +78,76 @@ async function getLastSyncDate(): Promise<string | null> {
 }
 
 export default async function Home() {
+  let dailyStats: Awaited<ReturnType<typeof getDailyCumulativeStats>> = [];
+  let weeklyStats: Awaited<ReturnType<typeof getWeeklyStats>> = [];
+  let monthlyStats: Awaited<ReturnType<typeof getMonthlyStats>> = [];
+  let lastSyncDate: string | null = null;
+  let dbError = false;
+
   try {
-    const [dailyStats, weeklyStats, monthlyStats, lastSyncDate] =
+    [dailyStats, weeklyStats, monthlyStats, lastSyncDate] =
       await Promise.all([
         getDailyCumulativeStats(),
         getWeeklyStats(),
         getMonthlyStats(),
         getLastSyncDate(),
       ]);
+  } catch (error) {
+    console.error("Error loading dashboard:", error);
+    dbError = true;
+  }
 
-    const goalTracking = calculateGoalTracking(dailyStats);
+  const goalTracking = calculateGoalTracking(dailyStats);
 
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="border-b border-gray-200 bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  🏃 Running Challenge 2026
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  3 participantes · 3,000 km cada uno · 365 días
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Suspense>
-                  <ConnectStravaButton />
-                </Suspense>
-                <a
-                  href="/weekly-winners"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                >
-                  Ganadores Semanales
-                </a>
-              </div>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                🏃 Running Challenge 2026
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                3 participantes · 3,000 km cada uno · 365 días
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Suspense>
+                <ConnectStravaButton />
+              </Suspense>
+              <a
+                href="/weekly-winners"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                Ganadores Semanales
+              </a>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Main content */}
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Main content */}
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {dbError ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
+            <div className="mb-3 text-4xl">🔌</div>
+            <h2 className="mb-2 text-lg font-bold text-amber-900">
+              No se puede conectar a la base de datos
+            </h2>
+            <p className="text-sm text-amber-700">
+              Verificá que PostgreSQL esté levantado con{" "}
+              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs">
+                docker compose up -d
+              </code>{" "}
+              y que las migraciones estén aplicadas con{" "}
+              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs">
+                npx prisma migrate dev
+              </code>
+            </p>
+          </div>
+        ) : (
           <div className="space-y-8">
             {/* Summary Cards */}
             <section>
@@ -155,33 +183,17 @@ export default async function Home() {
               <RangeChart />
             </section>
           </div>
-        </main>
+        )}
+      </main>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-            <p className="text-center text-xs text-gray-400">
-              Running Challenge 2026 · Datos sincronizados desde Strava
-            </p>
-          </div>
-        </footer>
-      </div>
-    );
-  } catch (error) {
-    console.error("Error loading dashboard:", error);
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <div className="mb-4 text-4xl">⚠️</div>
-          <h2 className="mb-2 text-xl font-bold text-gray-900">
-            Error al cargar el dashboard
-          </h2>
-          <p className="text-gray-500">
-            No se pudieron obtener los datos. Por favor, intentá de nuevo más
-            tarde.
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs text-gray-400">
+            Running Challenge 2026 · Datos sincronizados desde Strava
           </p>
         </div>
-      </div>
-    );
-  }
+      </footer>
+    </div>
+  );
 }
