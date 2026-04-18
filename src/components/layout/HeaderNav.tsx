@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
 
 interface NavLink {
@@ -17,12 +18,23 @@ export default function HeaderNav({ links }: HeaderNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex items-center gap-4">
       <a
         href="/"
-        className="text-xl font-bold text-[#FFD600] font-[family-name:var(--font-heading)]"
+        className="flex items-center gap-2"
       >
-        R3000
+        <Image
+          src="/logo.png"
+          alt="R3000"
+          width={36}
+          height={36}
+          style={{ width: 36, height: 36 }}
+          className="rounded-lg"
+          priority
+        />
+        <span className="text-xl font-bold text-[#FFD600] font-[family-name:var(--font-heading)]">
+          R3000
+        </span>
       </a>
 
       {/* Desktop nav */}
