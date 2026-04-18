@@ -1,0 +1,12 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: running-challenge-test-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: running_challenge_test
+    tmpfs:
+      - /var/lib/postgresql/data
