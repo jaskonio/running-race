@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Participant {
+  id              String    @id @default(cuid())
+  name            String
+  stravaAthleteId String    @unique
+  accessToken     String
+  refreshToken    String
+  tokenExpiresAt  DateTime
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  activities      Activity[]
+  dailyDistances  DailyDistance[]
+  syncRuns        SyncRun[]
+}
+
+model Activity {
+  id               String   @id @default(cuid())
+  participantId    String
+  stravaActivityId String   @unique
+  name             String
+  sportType        String
+  distanceKm       Float
+  movingTimeSec    Int
+  elapsedTimeSec   Int
+  startDate        DateTime
+  activityDate     DateTime
+  createdAt        DateTime @default(now())
+  participant      Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId])
+  @@index([activityDate])
+  @@index([participantId, activityDate])
+}
+
+model DailyDistance {
+  id            String   @id @default(cuid())
+  participantId String
+  date          DateTime
+  distanceKm    Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, date])
+  @@index([date])
+}
+
+model SyncRun {
+  id               String    @id @default(cuid())
+  participantId    String?
+  status           String
+  startedAt        DateTime
+  finishedAt       DateTime?
+  activitiesFetched Int     @default(0)
+  activitiesStored  Int     @default(0)
+  errorMessage     String?
+  participant      Participant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+
+  @@index([participantId])
+  @@index([startedAt])
+}

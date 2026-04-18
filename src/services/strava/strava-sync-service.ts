@@ -1,0 +1,228 @@
+import prisma from "@/lib/prisma";
+import { getChallengeStart, getChallengeEnd, formatDate } from "@/lib/date";
+import { ensureValidToken } from "./strava-auth-service";
+import {
+  fetchActivities,
+  filterRunningActivities,
+  metersToKm,
+} from "./strava-activity-service";
+
+const CHALLENGE_START = getChallengeStart();
+const CHALLENGE_END = getChallengeEnd();
+
+/**
+ * Update participant tokens in the database
+ */
+async function updateParticipantTokens(
+  id: string,
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    tokenExpiresAt: Date;
+  }
+): Promise<void> {
+  await prisma.participant.update({
+    where: { id },
+    data,
+  });
+}
+
+/**
+ * Sync a single participant's activities from Strava
+ */
+export async function syncParticipant(
+  participant: {
+    id: string;
+    name: string;
+    accessToken: string;
+    refreshToken: string;
+    tokenExpiresAt: Date;
+    isActive: boolean;
+  }
+): Promise<{
+  success: boolean;
+  activitiesFetched: number;
+  activitiesStored: number;
+  errorMessage?: string;
+}> {
+  // Create SyncRun record
+  const syncRun = await prisma.syncRun.create({
+    data: {
+      participantId: participant.id,
+      status: "running",
+      startedAt: new Date(),
+    },
+  });
+
+  try {
+    // Ensure token is valid
+    const accessToken = await ensureValidToken(participant, updateParticipantTokens);
+
+    // Fetch activities from Strava
+    const allActivities = await fetchActivities(accessToken, CHALLENGE_START, CHALLENGE_END);
+
+    // Filter: only running activities within challenge dates
+    const runningActivities = filterRunningActivities(
+      allActivities,
+      CHALLENGE_START,
+      CHALLENGE_END
+    );
+
+    let activitiesStored = 0;
+
+    // Process each activity
+    for (const activity of runningActivities) {
+      const activityDate = new Date(activity.start_date);
+
+      // Upsert activity (dedup via stravaActivityId)
+      await prisma.activity.upsert({
+        where: { stravaActivityId: String(activity.id) },
+        create: {
+          participantId: participant.id,
+          stravaActivityId: String(activity.id),
+          name: activity.name,
+          sportType: activity.sport_type,
+          distanceKm: metersToKm(activity.distance),
+          movingTimeSec: activity.moving_time,
+          elapsedTimeSec: activity.elapsed_time,
+          startDate: activityDate,
+          activityDate: new Date(
+            activityDate.getFullYear(),
+            activityDate.getMonth(),
+            activityDate.getDate()
+          ),
+        },
+        update: {
+          name: activity.name,
+          distanceKm: metersToKm(activity.distance),
+          movingTimeSec: activity.moving_time,
+          elapsedTimeSec: activity.elapsed_time,
+        },
+      });
+
+      activitiesStored++;
+    }
+
+    // Recalculate daily distances for all dates this participant has activities
+    await recalculateDailyDistances(participant.id);
+
+    // Update SyncRun as completed
+    await prisma.syncRun.update({
+      where: { id: syncRun.id },
+      data: {
+        status: "completed",
+        finishedAt: new Date(),
+        activitiesFetched: allActivities.length,
+        activitiesStored,
+      },
+    });
+
+    return {
+      success: true,
+      activitiesFetched: allActivities.length,
+      activitiesStored,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    // Check if it's a token refresh failure
+    if (errorMessage.includes("401") || errorMessage.includes("refresh")) {
+      await prisma.participant.update({
+        where: { id: participant.id },
+        data: { isActive: false },
+      });
+    }
+
+    // Update SyncRun as failed
+    await prisma.syncRun.update({
+      where: { id: syncRun.id },
+      data: {
+        status: "failed",
+        finishedAt: new Date(),
+        errorMessage,
+      },
+    });
+
+    return {
+      success: false,
+      activitiesFetched: 0,
+      activitiesStored: 0,
+      errorMessage,
+    };
+  }
+}
+
+/**
+ * Recalculate daily distances for a participant
+ * Sums all activities per date and upserts DailyDistance records
+ */
+async function recalculateDailyDistances(participantId: string): Promise<void> {
+  // Get all activities grouped by date
+  const activities = await prisma.activity.findMany({
+    where: { participantId },
+    select: { activityDate: true, distanceKm: true },
+  });
+
+  // Group by date and sum distances
+  const dailyMap = new Map<string, number>();
+
+  for (const activity of activities) {
+    const dateKey = formatDate(activity.activityDate);
+    const current = dailyMap.get(dateKey) || 0;
+    dailyMap.set(dateKey, current + activity.distanceKm);
+  }
+
+  // Upsert daily distances
+  for (const [dateStr, distanceKm] of dailyMap) {
+    const date = new Date(dateStr);
+
+    await prisma.dailyDistance.upsert({
+      where: {
+        participantId_date: {
+          participantId,
+          date,
+        },
+      },
+      create: {
+        participantId,
+        date,
+        distanceKm: Math.round(distanceKm * 100) / 100,
+      },
+      update: {
+        distanceKm: Math.round(distanceKm * 100) / 100,
+      },
+    });
+  }
+}
+
+/**
+ * Sync all active participants
+ */
+export async function syncAllParticipants(): Promise<
+  Array<{
+    participantId: string;
+    name: string;
+    success: boolean;
+    activitiesFetched: number;
+    activitiesStored: number;
+    errorMessage?: string;
+  }>
+> {
+  const participants = await prisma.participant.findMany({
+    where: { isActive: true },
+  });
+
+  const results = [];
+
+  for (const participant of participants) {
+    const result = await syncParticipant(participant);
+    results.push({
+      participantId: participant.id,
+      name: participant.name,
+      ...result,
+    });
+  }
+
+  return results;
+}
