@@ -93,10 +93,21 @@ export async function ensureValidToken(
   updateParticipant: (id: string, data: { accessToken: string; refreshToken: string; tokenExpiresAt: Date }) => Promise<void>
 ): Promise<string> {
   if (!isTokenExpired(participant.tokenExpiresAt)) {
+    console.log(
+      `[auth] Token still valid (expires=${participant.tokenExpiresAt.toISOString()}) — no refresh needed`
+    );
     return participant.accessToken;
   }
 
+  console.log(
+    `[auth] Token expired or expiring soon (expires=${participant.tokenExpiresAt.toISOString()}) — refreshing...`
+  );
+
   const tokenResponse = await refreshAccessToken(participant.refreshToken);
+
+  console.log(
+    `[auth] Token refreshed successfully — new expires_at=${new Date(tokenResponse.expires_at * 1000).toISOString()}`
+  );
 
   await updateParticipant(participant.id, {
     accessToken: tokenResponse.access_token,

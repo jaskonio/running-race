@@ -54,12 +54,25 @@ export async function syncParticipant(
     },
   });
 
+  console.log(`[sync][${participant.name}] Starting sync (syncRun=${syncRun.id})`);
+
   try {
     // Ensure token is valid
+    console.log(`[sync][${participant.name}] Checking token (expires=${participant.tokenExpiresAt.toISOString()})...`);
     const accessToken = await ensureValidToken(participant, updateParticipantTokens);
+    console.log(`[sync][${participant.name}] Token valid`);
 
     // Fetch activities from Strava
+    console.log(
+      `[sync][${participant.name}] Fetching activities from Strava ` +
+      `(after=${CHALLENGE_START.toISOString()}, before=${CHALLENGE_END.toISOString()})...`
+    );
     const allActivities = await fetchActivities(accessToken, CHALLENGE_START, CHALLENGE_END);
+    console.log(`[sync][${participant.name}] Fetched ${allActivities.length} total activities from Strava`);
+
+    // Log activity types for debugging
+    const sportTypes = [...new Set(allActivities.map((a) => a.sport_type || a.type))];
+    console.log(`[sync][${participant.name}] Sport types found: ${sportTypes.join(", ")}`);
 
     // Filter: only running activities within challenge dates
     const runningActivities = filterRunningActivities(
@@ -67,12 +80,27 @@ export async function syncParticipant(
       CHALLENGE_START,
       CHALLENGE_END
     );
+    console.log(
+      `[sync][${participant.name}] Filtered to ${runningActivities.length} running activities ` +
+      `(from ${allActivities.length} total)`
+    );
+
+    if (runningActivities.length === 0) {
+      console.log(`[sync][${participant.name}] No running activities to process`);
+    }
 
     let activitiesStored = 0;
 
     // Process each activity
     for (const activity of runningActivities) {
       const activityDate = new Date(activity.start_date);
+      const km = metersToKm(activity.distance);
+
+      console.log(
+        `[sync][${participant.name}] Processing: "${activity.name}" ` +
+        `date=${activityDate.toISOString()} km=${km} ` +
+        `sport=${activity.sport_type || activity.type}`
+      );
 
       // Upsert activity (dedup via stravaActivityId)
       await prisma.activity.upsert({
@@ -82,7 +110,7 @@ export async function syncParticipant(
           stravaActivityId: String(activity.id),
           name: activity.name,
           sportType: activity.sport_type,
-          distanceKm: metersToKm(activity.distance),
+          distanceKm: km,
           movingTimeSec: activity.moving_time,
           elapsedTimeSec: activity.elapsed_time,
           startDate: activityDate,
@@ -94,7 +122,7 @@ export async function syncParticipant(
         },
         update: {
           name: activity.name,
-          distanceKm: metersToKm(activity.distance),
+          distanceKm: km,
           movingTimeSec: activity.moving_time,
           elapsedTimeSec: activity.elapsed_time,
         },
@@ -104,6 +132,7 @@ export async function syncParticipant(
     }
 
     // Recalculate daily distances for all dates this participant has activities
+    console.log(`[sync][${participant.name}] Recalculating daily distances...`);
     await recalculateDailyDistances(participant.id);
 
     // Update SyncRun as completed
@@ -117,6 +146,11 @@ export async function syncParticipant(
       },
     });
 
+    console.log(
+      `[sync][${participant.name}] ✅ Sync complete: ` +
+      `fetched=${allActivities.length}, stored=${activitiesStored}`
+    );
+
     return {
       success: true,
       activitiesFetched: allActivities.length,
@@ -126,8 +160,14 @@ export async function syncParticipant(
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
+    console.error(
+      `[sync][${participant.name}] ❌ Sync failed: ${errorMessage}`,
+      error instanceof Error ? error.stack : ""
+    );
+
     // Check if it's a token refresh failure
     if (errorMessage.includes("401") || errorMessage.includes("refresh")) {
+      console.error(`[sync][${participant.name}] Token issue detected — marking participant as inactive`);
       await prisma.participant.update({
         where: { id: participant.id },
         data: { isActive: false },
@@ -212,6 +252,21 @@ export async function syncAllParticipants(): Promise<
   const participants = await prisma.participant.findMany({
     where: { isActive: true },
   });
+
+  console.log(`[sync] Found ${participants.length} active participants`);
+
+  if (participants.length === 0) {
+    console.warn("[sync] No active participants found — nothing to sync");
+  }
+
+  for (const p of participants) {
+    console.log(
+      `[sync] Participant: ${p.name} (id=${p.id}, ` +
+      `stravaId=${p.stravaAthleteId}, ` +
+      `tokenExpires=${p.tokenExpiresAt.toISOString()}, ` +
+      `isActive=${p.isActive})`
+    );
+  }
 
   const results = [];
 

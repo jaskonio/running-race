@@ -16,6 +16,11 @@ export async function fetchActivities(
   let page = 1;
   const perPage = 100;
 
+  console.log(
+    `[strava-api] Fetching activities ` +
+    `after=${after?.toISOString() || "none"} before=${before?.toISOString() || "none"}`
+  );
+
   while (true) {
     const params: Record<string, string | number> = {
       page,
@@ -30,6 +35,8 @@ export async function fetchActivities(
       params.before = Math.floor(before.getTime() / 1000);
     }
 
+    console.log(`[strava-api] Requesting page ${page} (per_page=${perPage})`);
+
     const response = await axios.get<StravaActivity[]>(
       `${STRAVA_API_BASE}/athlete/activities`,
       {
@@ -41,6 +48,7 @@ export async function fetchActivities(
     );
 
     const activities = response.data;
+    console.log(`[strava-api] Page ${page} returned ${activities.length} activities`);
 
     if (activities.length === 0) {
       break;
@@ -55,6 +63,10 @@ export async function fetchActivities(
 
     page++;
   }
+
+  console.log(
+    `[strava-api] Total activities fetched: ${allActivities.length} across ${page} page(s)`
+  );
 
   return allActivities;
 }
