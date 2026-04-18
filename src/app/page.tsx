@@ -98,31 +98,39 @@ export default async function Home() {
   }
 
   const goalTracking = calculateGoalTracking(dailyStats);
+  const groupTotal = dailyStats.reduce((sum, p) => sum + p.cumulativeTotal, 0);
+  const groupGoal = GOAL_KM * dailyStats.length;
+  const groupProgress = groupGoal > 0 ? Math.round((groupTotal / groupGoal) * 10000) / 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="border-b border-[#27272A] bg-[#0A0A0A]">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                🏃 Running Challenge 2026
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                3 participantes · 3,000 km cada uno · 365 días
-              </p>
+            <div className="flex items-center gap-6">
+              <a href="/" className="text-xl font-bold text-[#FFD600] font-[family-name:var(--font-heading)]">
+                RC2026
+              </a>
+              <nav className="hidden sm:flex items-center gap-4">
+                <a
+                  href="/"
+                  className="text-sm font-medium text-[#F5F5F5] border-b-2 border-[#FFD600] pb-0.5"
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="/weekly-winners"
+                  className="text-sm font-medium text-[#A1A1AA] transition-colors hover:text-[#F5F5F5]"
+                >
+                  Ganadores Semanales
+                </a>
+              </nav>
             </div>
             <div className="flex items-center gap-3">
               <Suspense>
                 <ConnectStravaButton />
               </Suspense>
-              <a
-                href="/weekly-winners"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                Ganadores Semanales
-              </a>
             </div>
           </div>
         </div>
@@ -131,24 +139,72 @@ export default async function Home() {
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {dbError ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
-            <div className="mb-3 text-4xl">🔌</div>
-            <h2 className="mb-2 text-lg font-bold text-amber-900">
+          <div className="rounded-2xl border border-[#27272A] bg-[#18181B] p-8 text-center">
+            <div className="mb-3 text-4xl text-[#FFD600]">🔌</div>
+            <h2 className="mb-2 text-lg font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
               No se puede conectar a la base de datos
             </h2>
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-[#A1A1AA]">
               Verificá que PostgreSQL esté levantado con{" "}
-              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs">
+              <code className="rounded bg-[#0A0A0A] px-1.5 py-0.5 font-mono text-xs text-[#FFD600]">
                 docker compose up -d
               </code>{" "}
               y que las migraciones estén aplicadas con{" "}
-              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs">
+              <code className="rounded bg-[#0A0A0A] px-1.5 py-0.5 font-mono text-xs text-[#FFD600]">
                 npx prisma migrate dev
               </code>
             </p>
           </div>
         ) : (
           <div className="space-y-8">
+            {/* Hero Section */}
+            <section className="rounded-2xl border border-[#27272A] bg-[#18181B] p-8 sm:p-10">
+              <div className="flex flex-col items-center text-center">
+                <h1 className="text-5xl sm:text-6xl font-extrabold text-[#FFD600] tracking-tight font-[family-name:var(--font-heading)]">
+                  3000KM CHALLENGE
+                </h1>
+                <p className="mt-3 text-lg text-[#A1A1AA]">
+                  3 runners. 1 year. 1 leaderboard.
+                </p>
+
+                {/* Group progress */}
+                <div className="mt-8 w-full max-w-2xl">
+                  <div className="flex items-baseline justify-center gap-3">
+                    <span className="text-4xl sm:text-5xl font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
+                      {groupTotal.toFixed(1)}
+                    </span>
+                    <span className="text-xl text-[#A1A1AA]">km</span>
+                    <span className="text-xl text-[#A1A1AA]">de</span>
+                    <span className="text-4xl sm:text-5xl font-bold text-[#A1A1AA] font-[family-name:var(--font-heading)]">
+                      {(groupGoal / 1000).toFixed(0)},000
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-4 h-4 w-full rounded-full bg-[#27272A] overflow-hidden">
+                    <div
+                      className="h-4 rounded-full bg-[#FFD600] transition-all duration-700"
+                      style={{ width: `${Math.min(groupProgress, 100)}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-between text-sm text-[#A1A1AA]">
+                    <span>{groupProgress.toFixed(1)}% completado</span>
+                    {lastSyncDate && (
+                      <span>
+                        Última sync:{" "}
+                        {new Date(lastSyncDate).toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* Summary Cards */}
             <section>
               <SummaryCards
@@ -187,9 +243,9 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white">
+      <footer className="border-t border-[#27272A]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-[#A1A1AA]">
             Running Challenge 2026 · Datos sincronizados desde Strava
           </p>
         </div>

@@ -16,16 +16,17 @@ export default function Leaderboard({ participants }: LeaderboardProps) {
 
   if (participants.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-        <p>No hay datos para mostrar la tabla de posiciones.</p>
+      <div className="rounded-2xl border border-[#27272A] bg-[#18181B] p-8 text-center">
+        <div className="mb-3 text-3xl text-[#FFD600]">📊</div>
+        <p className="text-[#A1A1AA]">No hay datos para mostrar la tabla de posiciones.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-200 px-6 py-4">
-        <h2 className="text-lg font-bold text-gray-900">
+    <div className="rounded-2xl border border-[#27272A] bg-[#18181B] overflow-hidden transition-all duration-300 hover:border-[#FFD600]/20">
+      <div className="border-b border-[#27272A] px-6 py-4">
+        <h2 className="text-2xl font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
           Tabla de Posiciones
         </h2>
       </div>
@@ -33,7 +34,7 @@ export default function Leaderboard({ participants }: LeaderboardProps) {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+            <tr className="border-b border-[#27272A] text-left text-xs font-medium uppercase tracking-wider text-[#A1A1AA]">
               <th className="px-6 py-3">#</th>
               <th className="px-6 py-3">Participante</th>
               <th className="px-6 py-3 text-right">Total km</th>
@@ -42,7 +43,7 @@ export default function Leaderboard({ participants }: LeaderboardProps) {
               <th className="px-6 py-3 text-right">Avance</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-[#27272A]">
             {ranked.map((participant, index) => {
               const position = index + 1;
               const remaining = Math.max(
@@ -54,39 +55,39 @@ export default function Leaderboard({ participants }: LeaderboardProps) {
               return (
                 <tr
                   key={participant.participantId}
-                  className="transition-colors hover:bg-gray-50"
+                  className="transition-colors hover:bg-[#27272A]/30"
                 >
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
                         position === 1
-                          ? "bg-yellow-100 text-yellow-700"
+                          ? "bg-[#FFD600] text-[#0A0A0A] shadow-[0_0_12px_rgba(255,214,0,0.3)]"
                           : position === 2
-                          ? "bg-gray-100 text-gray-600"
+                          ? "bg-[#3f3f46] text-[#F5F5F5]"
                           : position === 3
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-gray-50 text-gray-500"
+                          ? "bg-[#78350f]/30 text-[#d97706]"
+                          : "bg-[#27272A] text-[#A1A1AA]"
                       }`}
                     >
                       {position}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
+                  <td className="px-6 py-4 font-medium text-[#F5F5F5]">
                     {participant.name}
                   </td>
-                  <td className="px-6 py-4 text-right font-mono font-semibold text-gray-900">
+                  <td className="px-6 py-4 text-right font-mono font-semibold text-[#F5F5F5]">
                     {participant.cumulativeTotal.toFixed(1)}
                   </td>
-                  <td className="px-6 py-4 text-right text-sm text-gray-600">
+                  <td className="px-6 py-4 text-right text-sm text-[#A1A1AA]">
                     {participant.goalProgress.toFixed(1)}%
                   </td>
-                  <td className="px-6 py-4 text-right text-sm text-gray-600">
+                  <td className="px-6 py-4 text-right text-sm text-[#A1A1AA]">
                     {remaining.toFixed(0)} km
                   </td>
                   <td className="px-6 py-4">
-                    <div className="h-2 w-full max-w-[120px] rounded-full bg-gray-100 ml-auto">
+                    <div className="h-2 w-full max-w-[120px] rounded-full bg-[#27272A] ml-auto">
                       <div
-                        className="h-2 rounded-full bg-blue-500 transition-all duration-500"
+                        className="h-2 rounded-full bg-[#FFD600] transition-all duration-500"
                         style={{ width: `${barWidth}%` }}
                       />
                     </div>

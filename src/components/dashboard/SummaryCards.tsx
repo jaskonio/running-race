@@ -3,25 +3,11 @@
 import type { DailyParticipantStats, GoalTracking } from "@/types/stats";
 
 const GOAL_KM = 3000;
-const COLORS = ["#2563eb", "#dc2626", "#16a34a"];
 
 interface SummaryCardsProps {
   participants: DailyParticipantStats[];
   goalTracking: GoalTracking[];
   lastSyncDate: string | null;
-}
-
-function getMedalEmoji(position: number): string {
-  switch (position) {
-    case 1:
-      return "🥇";
-    case 2:
-      return "🥈";
-    case 3:
-      return "🥉";
-    default:
-      return `#${position}`;
-  }
 }
 
 function getStatusLabel(status: GoalTracking["status"]): string {
@@ -39,18 +25,31 @@ function getStatusLabel(status: GoalTracking["status"]): string {
   }
 }
 
-function getStatusColor(status: GoalTracking["status"]): string {
+function getStatusBadgeClasses(status: GoalTracking["status"]): string {
   switch (status) {
     case "not-started":
-      return "text-gray-500";
+      return "bg-[#27272A] text-[#A1A1AA]";
     case "behind":
-      return "text-orange-500";
+      return "bg-red-500/10 text-red-400 border border-red-500/20";
     case "on-track":
-      return "text-blue-500";
+      return "bg-[#FFD600]/10 text-[#FFD600] border border-[#FFD600]/20";
     case "ahead":
-      return "text-green-500";
+      return "bg-green-500/10 text-green-400 border border-green-500/20";
     case "achieved":
-      return "text-yellow-500";
+      return "bg-[#FFD600] text-[#0A0A0A]";
+  }
+}
+
+function getPositionBadgeClasses(position: number): string {
+  switch (position) {
+    case 1:
+      return "bg-[#FFD600] text-[#0A0A0A] shadow-[0_0_12px_rgba(255,214,0,0.3)]";
+    case 2:
+      return "bg-[#27272A] text-[#A1A1AA]";
+    case 3:
+      return "bg-[#27272A] text-[#A1A1AA]";
+    default:
+      return "bg-[#27272A] text-[#A1A1AA]";
   }
 }
 
@@ -64,56 +63,19 @@ export default function SummaryCards({
     (a, b) => b.cumulativeTotal - a.cumulativeTotal
   );
 
-  const groupTotal = participants.reduce(
-    (sum, p) => sum + p.cumulativeTotal,
-    0
-  );
-  const groupGoal = GOAL_KM * participants.length;
-  const groupProgress = Math.round((groupTotal / groupGoal) * 10000) / 100;
-
   return (
     <div>
-      {/* Group summary */}
-      <div className="mb-6 rounded-xl border border-gray-200 bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white shadow-lg">
-        <h2 className="text-lg font-semibold opacity-90">
-          Progreso del Grupo
-        </h2>
-        <div className="mt-2 flex items-baseline gap-3">
-          <span className="text-4xl font-bold">
-            {groupTotal.toFixed(1)} km
-          </span>
-          <span className="text-lg opacity-75">
-            de {(groupGoal / 1000).toFixed(0)},000 km
-          </span>
-        </div>
-        <div className="mt-3 h-3 w-full rounded-full bg-white/20">
-          <div
-            className="h-3 rounded-full bg-white transition-all duration-500"
-            style={{ width: `${Math.min(groupProgress, 100)}%` }}
-          />
-        </div>
-        <div className="mt-1 text-sm opacity-75">
-          {groupProgress.toFixed(1)}% completado
-        </div>
-        {lastSyncDate && (
-          <div className="mt-2 text-xs opacity-60">
-            Última sincronización:{" "}
-            {new Date(lastSyncDate).toLocaleDateString("es-ES", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </div>
-        )}
-      </div>
+      {/* Section title */}
+      <h2 className="mb-4 text-2xl font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
+        Participantes
+      </h2>
 
       {/* Individual cards */}
       {participants.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-          <p className="text-lg">No hay participantes activos aún.</p>
-          <p className="mt-2 text-sm">
+        <div className="rounded-2xl border border-[#27272A] bg-[#18181B] p-8 text-center">
+          <div className="mb-3 text-3xl text-[#FFD600]">🏃</div>
+          <p className="text-lg text-[#F5F5F5]">No hay participantes activos aún.</p>
+          <p className="mt-2 text-sm text-[#A1A1AA]">
             Conectá tu cuenta de Strava para empezar a ver el progreso.
           </p>
         </div>
@@ -121,7 +83,6 @@ export default function SummaryCards({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {ranked.map((participant, index) => {
             const position = index + 1;
-            const color = COLORS[participants.indexOf(participant)] || COLORS[0];
             const goal = goalTracking.find(
               (g) => g.participantId === participant.participantId
             );
@@ -130,41 +91,37 @@ export default function SummaryCards({
             return (
               <div
                 key={participant.participantId}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-2xl border border-[#27272A] bg-[#18181B] p-5 transition-all duration-300 hover:border-[#FFD600]/30"
               >
                 <div className="flex items-center justify-between">
-                  <h3
-                    className="text-lg font-bold"
-                    style={{ color }}
-                  >
+                  <h3 className="text-lg font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
                     {participant.name}
                   </h3>
-                  <span className="text-2xl">
-                    {getMedalEmoji(position)}
+                  <span
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${getPositionBadgeClasses(position)}`}
+                  >
+                    #{position}
                   </span>
                 </div>
 
-                <div className="mt-3">
+                <div className="mt-4">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">
+                    <span className="text-3xl font-bold text-[#F5F5F5] font-[family-name:var(--font-heading)]">
                       {participant.cumulativeTotal.toFixed(1)}
                     </span>
-                    <span className="text-sm text-gray-500">km</span>
+                    <span className="text-sm text-[#A1A1AA]">km</span>
                   </div>
                 </div>
 
                 {/* Progress bar */}
-                <div className="mt-3">
-                  <div className="h-2 w-full rounded-full bg-gray-100">
+                <div className="mt-4">
+                  <div className="h-2 w-full rounded-full bg-[#27272A]">
                     <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(participant.goalProgress, 100)}%`,
-                        backgroundColor: color,
-                      }}
+                      className="h-2 rounded-full bg-[#FFD600] transition-all duration-500"
+                      style={{ width: `${Math.min(participant.goalProgress, 100)}%` }}
                     />
                   </div>
-                  <div className="mt-1 flex justify-between text-xs text-gray-500">
+                  <div className="mt-1.5 flex justify-between text-xs text-[#A1A1AA]">
                     <span>{participant.goalProgress.toFixed(1)}%</span>
                     <span>Restan {remaining.toFixed(0)} km</span>
                   </div>
@@ -172,13 +129,15 @@ export default function SummaryCards({
 
                 {/* Goal tracking info */}
                 {goal && (
-                  <div className="mt-3 border-t border-gray-100 pt-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className={getStatusColor(goal.status)}>
+                  <div className="mt-4 border-t border-[#27272A] pt-3">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClasses(goal.status)}`}
+                      >
                         {getStatusLabel(goal.status)}
                       </span>
                       {goal.projectedCompletionDate && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-[#A1A1AA]">
                           Proyección:{" "}
                           {new Date(
                             goal.projectedCompletionDate
@@ -189,7 +148,7 @@ export default function SummaryCards({
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
+                    <div className="mt-2 text-xs text-[#A1A1AA]">
                       Promedio: {goal.dailyAvgKm.toFixed(1)} km/día
                     </div>
                   </div>
