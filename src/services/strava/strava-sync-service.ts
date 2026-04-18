@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getChallengeStart, getChallengeEnd, formatDate } from "@/lib/date";
-import { ensureValidToken } from "./strava-auth-service";
+import { ensureValidToken, refreshAccessToken } from "./strava-auth-service";
 import {
   fetchActivities,
   filterRunningActivities,
@@ -59,15 +59,44 @@ export async function syncParticipant(
   try {
     // Ensure token is valid
     console.log(`[sync][${participant.name}] Checking token (expires=${participant.tokenExpiresAt.toISOString()})...`);
-    const accessToken = await ensureValidToken(participant, updateParticipantTokens);
+    let accessToken = await ensureValidToken(participant, updateParticipantTokens);
     console.log(`[sync][${participant.name}] Token valid`);
 
-    // Fetch activities from Strava
+    // Fetch activities from Strava (with retry on 401)
     console.log(
       `[sync][${participant.name}] Fetching activities from Strava ` +
       `(after=${CHALLENGE_START.toISOString()}, before=${CHALLENGE_END.toISOString()})...`
     );
-    const allActivities = await fetchActivities(accessToken, CHALLENGE_START, CHALLENGE_END);
+
+    let allActivities;
+    try {
+      allActivities = await fetchActivities(accessToken, CHALLENGE_START, CHALLENGE_END);
+    } catch (fetchError: unknown) {
+      const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : "Unknown error";
+
+      // If 401, force a token refresh and retry once
+      if (fetchErrorMsg.includes("401")) {
+        console.log(
+          `[sync][${participant.name}] Got 401 from Strava — forcing token refresh and retrying...`
+        );
+        const tokenResponse = await refreshAccessToken(participant.refreshToken);
+        accessToken = tokenResponse.access_token;
+
+        await updateParticipantTokens(participant.id, {
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          tokenExpiresAt: new Date(tokenResponse.expires_at * 1000),
+        });
+
+        console.log(
+          `[sync][${participant.name}] Token refreshed — retrying fetch...`
+        );
+        allActivities = await fetchActivities(accessToken, CHALLENGE_START, CHALLENGE_END);
+      } else {
+        throw fetchError;
+      }
+    }
+
     console.log(`[sync][${participant.name}] Fetched ${allActivities.length} total activities from Strava`);
 
     // Log activity types for debugging
@@ -165,13 +194,12 @@ export async function syncParticipant(
       error instanceof Error ? error.stack : ""
     );
 
-    // Check if it's a token refresh failure
+    // Check if it's a token refresh failure — log but do NOT deactivate
+    // The participant can be reconnected via the Strava OAuth button
     if (errorMessage.includes("401") || errorMessage.includes("refresh")) {
-      console.error(`[sync][${participant.name}] Token issue detected — marking participant as inactive`);
-      await prisma.participant.update({
-        where: { id: participant.id },
-        data: { isActive: false },
-      });
+      console.error(
+        `[sync][${participant.name}] Token issue detected — participant needs to reconnect via Strava OAuth button`
+      );
     }
 
     // Update SyncRun as failed
