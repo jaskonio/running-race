@@ -7,10 +7,12 @@ import type { GoalTracking } from "@/types/stats";
 
 import SummaryCards from "@/components/dashboard/SummaryCards";
 import Leaderboard from "@/components/dashboard/Leaderboard";
+import ConnectStravaButton from "@/components/dashboard/ConnectStravaButton";
 import DailyProgressChart from "@/components/charts/DailyProgressChart";
 import WeeklyChart from "@/components/charts/WeeklyChart";
 import MonthlyChart from "@/components/charts/MonthlyChart";
 import RangeChart from "@/components/charts/RangeChart";
+import { Suspense } from "react";
 
 const GOAL_KM = 3000;
 
@@ -101,12 +103,17 @@ export default async function Home() {
                   3 participantes · 3,000 km cada uno · 365 días
                 </p>
               </div>
-              <a
-                href="/weekly-winners"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                Ganadores Semanales
-              </a>
+              <div className="flex items-center gap-3">
+                <Suspense>
+                  <ConnectStravaButton />
+                </Suspense>
+                <a
+                  href="/weekly-winners"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Ganadores Semanales
+                </a>
+              </div>
             </div>
           </div>
         </header>
