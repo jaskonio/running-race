@@ -6,15 +6,21 @@ import { useEffect, useState } from "react";
 export default function ConnectStravaButton() {
   const searchParams = useSearchParams();
   const [notification, setNotification] = useState<{
-    type: "success" | "error";
+    type: "success" | "warning" | "error";
     message: string;
   } | null>(null);
 
   useEffect(() => {
     const connected = searchParams.get("connected");
+    const pending = searchParams.get("pending");
     const error = searchParams.get("error");
 
-    if (connected) {
+    if (pending) {
+      setNotification({
+        type: "warning",
+        message: `¡${decodeURIComponent(pending)} se conectó correctamente! Un administrador debe activar tu cuenta para que aparezcas en el dashboard.`,
+      });
+    } else if (connected) {
       setNotification({
         type: "success",
         message: `¡${decodeURIComponent(connected)} se conectó correctamente!`,
@@ -30,8 +36,8 @@ export default function ConnectStravaButton() {
       });
     }
 
-    if (connected || error) {
-      const timer = setTimeout(() => setNotification(null), 6000);
+    if (connected || pending || error) {
+      const timer = setTimeout(() => setNotification(null), 8000);
       return () => clearTimeout(timer);
     }
   }, [searchParams]);
@@ -44,10 +50,12 @@ export default function ConnectStravaButton() {
           className={`w-full rounded-xl px-4 py-3 text-sm font-medium border ${
             notification.type === "success"
               ? "bg-green-500/10 text-green-400 border-green-500/20"
+              : notification.type === "warning"
+              ? "bg-[#FFD600]/10 text-[#FFD600] border-[#FFD600]/20"
               : "bg-red-500/10 text-red-400 border-red-500/20"
           }`}
         >
-          {notification.type === "success" ? "✅" : "❌"} {notification.message}
+          {notification.type === "success" ? "✅" : notification.type === "warning" ? "⚠️" : "❌"} {notification.message}
         </div>
       )}
 

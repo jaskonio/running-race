@@ -14,7 +14,7 @@ model Participant {
   accessToken     String
   refreshToken    String
   tokenExpiresAt  DateTime
-  isActive        Boolean   @default(true)
+  isActive        Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   activities      Activity[]

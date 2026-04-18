@@ -152,7 +152,7 @@ export default async function Home() {
                   RETO 3000KM
                 </h1>
                 <p className="mt-3 text-lg text-[#A1A1AA]">
-                  3 runners. 1 year. 1 leaderboard.
+                  Entrenamientos. Un año. Un mismo objetivo.
                 </p>
 
                 {/* Group progress */}

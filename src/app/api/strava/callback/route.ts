@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
     const athleteId = String(athlete.id);
     const participantName = `${athlete.firstname} ${athlete.lastname}`.trim();
 
+    const isAdmin = Boolean(ADMIN_ATHLETE_ID && athleteId === ADMIN_ATHLETE_ID);
+
     const participant = await prisma.participant.upsert({
       where: { stravaAthleteId: athleteId },
       create: {
@@ -56,21 +58,21 @@ export async function GET(request: NextRequest) {
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token,
         tokenExpiresAt: new Date(tokenResponse.expires_at * 1000),
-        isActive: true,
+        isActive: isAdmin,
       },
       update: {
         name: participantName,
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token,
         tokenExpiresAt: new Date(tokenResponse.expires_at * 1000),
-        isActive: true,
       },
     });
 
     // Determine redirect destination
+    const statusParam = participant.isActive ? "connected" : "pending";
     const redirectUrl = fromAdmin
-      ? `${getEnv().NEXT_PUBLIC_APP_URL}/admin?connected=${encodeURIComponent(participant.name)}`
-      : `${getEnv().NEXT_PUBLIC_APP_URL}?connected=${encodeURIComponent(participant.name)}`;
+      ? `${getEnv().NEXT_PUBLIC_APP_URL}/admin?${statusParam}=${encodeURIComponent(participant.name)}`
+      : `${getEnv().NEXT_PUBLIC_APP_URL}?${statusParam}=${encodeURIComponent(participant.name)}`;
 
     const response = NextResponse.redirect(redirectUrl);
 
