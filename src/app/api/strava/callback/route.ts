@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForToken } from "@/services/strava/strava-auth-service";
 import prisma from "@/lib/prisma";
 import { getEnv } from "@/lib/env";
+import { verifyState } from "@/lib/oauth-state";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +11,8 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get("state");
     const error = searchParams.get("error");
 
-    // Verify CSRF state
-    const storedState = request.cookies.get("strava_oauth_state")?.value;
-    if (!state || state !== storedState) {
+    // Verify CSRF state via HMAC signature (no cookies needed)
+    if (!state || !verifyState(state)) {
       return NextResponse.json(
         { success: false, error: "Invalid OAuth state — possible CSRF attack" },
         { status: 400 }
