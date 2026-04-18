@@ -8,6 +8,7 @@ import type { GoalTracking } from "@/types/stats";
 import SummaryCards from "@/components/dashboard/SummaryCards";
 import Leaderboard from "@/components/dashboard/Leaderboard";
 import ConnectStravaButton from "@/components/dashboard/ConnectStravaButton";
+import HeaderNav from "@/components/layout/HeaderNav";
 import DailyProgressChart from "@/components/charts/DailyProgressChart";
 import WeeklyChart from "@/components/charts/WeeklyChart";
 import MonthlyChart from "@/components/charts/MonthlyChart";
@@ -108,25 +109,12 @@ export default async function Home() {
       <header className="border-b border-[#27272A] bg-[#0A0A0A]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <a href="/" className="text-xl font-bold text-[#FFD600] font-[family-name:var(--font-heading)]">
-                RC2026
-              </a>
-              <nav className="hidden sm:flex items-center gap-4">
-                <a
-                  href="/"
-                  className="text-sm font-medium text-[#F5F5F5] border-b-2 border-[#FFD600] pb-0.5"
-                >
-                  Dashboard
-                </a>
-                <a
-                  href="/weekly-winners"
-                  className="text-sm font-medium text-[#A1A1AA] transition-colors hover:text-[#F5F5F5]"
-                >
-                  Ganadores Semanales
-                </a>
-              </nav>
-            </div>
+            <HeaderNav
+              links={[
+                { href: "/", label: "Dashboard", active: true },
+                { href: "/weekly-winners", label: "Ganadores Semanales" },
+              ]}
+            />
             <div className="flex items-center gap-3">
               <Suspense>
                 <ConnectStravaButton />
@@ -161,7 +149,7 @@ export default async function Home() {
             <section className="rounded-2xl border border-[#27272A] bg-[#18181B] p-8 sm:p-10">
               <div className="flex flex-col items-center text-center">
                 <h1 className="text-5xl sm:text-6xl font-extrabold text-[#FFD600] tracking-tight font-[family-name:var(--font-heading)]">
-                  3000KM CHALLENGE
+                  RETO 3000KM
                 </h1>
                 <p className="mt-3 text-lg text-[#A1A1AA]">
                   3 runners. 1 year. 1 leaderboard.

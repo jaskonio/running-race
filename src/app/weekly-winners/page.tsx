@@ -1,5 +1,5 @@
 import { getWeeklyWinners } from "@/services/stats/rankings-service";
-import Link from "next/link";
+import HeaderNav from "@/components/layout/HeaderNav";
 
 export default async function WeeklyWinnersPage() {
   try {
@@ -11,31 +11,12 @@ export default async function WeeklyWinnersPage() {
         <header className="border-b border-[#27272A] bg-[#0A0A0A]">
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <a href="/" className="text-xl font-bold text-[#FFD600] font-[family-name:var(--font-heading)]">
-                  RC2026
-                </a>
-                <nav className="hidden sm:flex items-center gap-4">
-                  <a
-                    href="/"
-                    className="text-sm font-medium text-[#A1A1AA] transition-colors hover:text-[#F5F5F5]"
-                  >
-                    Dashboard
-                  </a>
-                  <a
-                    href="/weekly-winners"
-                    className="text-sm font-medium text-[#F5F5F5] border-b-2 border-[#FFD600] pb-0.5"
-                  >
-                    Ganadores Semanales
-                  </a>
-                </nav>
-              </div>
-              <Link
-                href="/"
-                className="rounded-xl border border-[#27272A] px-4 py-2 text-sm font-medium text-[#F5F5F5] transition-colors hover:border-[#FFD600]"
-              >
-                ← Dashboard
-              </Link>
+              <HeaderNav
+                links={[
+                  { href: "/", label: "Dashboard" },
+                  { href: "/weekly-winners", label: "Ganadores Semanales", active: true },
+                ]}
+              />
             </div>
           </div>
         </header>
@@ -247,12 +228,12 @@ export default async function WeeklyWinnersPage() {
             No se pudieron obtener los datos. Por favor, intentá de nuevo más
             tarde.
           </p>
-          <Link
+          <a
             href="/"
             className="mt-4 inline-block rounded-xl bg-[#FFD600] px-4 py-2 text-sm font-bold text-[#0A0A0A] hover:bg-[#FFEA00]"
           >
             Volver al Dashboard
-          </Link>
+          </a>
         </div>
       </div>
     );
